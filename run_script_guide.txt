@@ -1,0 +1,3 @@
+For evaluating the model, please 
+Step1: Keep the test data within ./testset folder.
+Step2: run python test_demo.py to generate the results.
