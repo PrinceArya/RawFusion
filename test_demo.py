@@ -1,4 +1,5 @@
 import torch
+import tifffile
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import cv2
@@ -16,7 +17,7 @@ import torchvision.transforms.functional as F
 
 
 """import your models here!"""
-from models.Model_0_unet import UNet as My_model
+from models.Model_02_MFP import Merging_Net as My_model
 
 
 
@@ -28,6 +29,7 @@ class CustomDataset(torch.utils.data.Dataset):
 
         # Load your dataset files or directories here
         self.files = os.listdir(root_dir)  # List all files in the directory
+        self.files = sorted(self.files)
         print(f"Loaded {len(self.files)} tif files.")  # Replace this with actual file loading logic
 
     def __len__(self):
@@ -40,10 +42,10 @@ class CustomDataset(torch.utils.data.Dataset):
         """
         # Load the input and target images from disk or memory
         input_images = []
-        names = os.listdir(self.root_dir)
+        # names = os.listdir(self.root_dir)
         # import pdb; pdb.set_trace()
         for i in range(9):  # Assuming you have 8 input images per sample
-            img_path = f"{self.root_dir}{names[9*idx + i]}"  # Adjust path according to your naming convention
+            img_path = f"{self.root_dir}{self.files[9*idx + i]}"  # Adjust path according to your naming convention
             img_tensor = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
             if self.transform:
                 img_tensor = self.transform(img_tensor)
@@ -77,7 +79,8 @@ def test(cuda=True, mGPU=True):
     # load trained model parameters
     if mGPU:
         model = nn.DataParallel(model)
-    model.load_state_dict(torch.load('./model_zoo/Ckpt_0_Organizer_team.pth', weights_only=True))
+    checkpoint = torch.load('./model_zoo/Ckpt_02_MFP.tar')
+    model.load_state_dict(checkpoint['state_dict'])
     print('The model has been completely loaded from the user submission.')
 
     # print parameters and flops
@@ -90,7 +93,6 @@ def test(cuda=True, mGPU=True):
     print(f"\tTotal FLOPs of the model : {flops.total() / (1000**4) :.3f} T")
     print("=" * 64)
     print('\n------- Fusion started -------\n')
-
 
     model.eval()
 
@@ -124,8 +126,10 @@ def test(cuda=True, mGPU=True):
             # to save the output image
             names = os.listdir("./testset")
             ii = i * 9
+            names = sorted(names)
             out_file_name = test_dir + f'/' + names[ii][:-9] + f'-out.tif'
-            cv2.imwrite(out_file_name, (pred[0]*255).permute(1,2,0).cpu().numpy().astype(np.uint8))
+            pred_bgr = pred[0].permute(1,2,0).cpu().numpy().astype(np.float32)[:,:,::-1]
+            tifffile.imwrite(out_file_name, pred_bgr)
             print(f'{i+1}-th image is completed.\t| {out_file_name} \t| time: {timei:.2f} ms.')
 
 
@@ -134,4 +138,4 @@ def test(cuda=True, mGPU=True):
     print(f'Total Validation time : {mean_time: .2f} ms.')
 
 if __name__ == '__main__':
-    test()
+    test(cuda=True, mGPU = False)

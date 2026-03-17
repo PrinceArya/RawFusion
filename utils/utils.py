@@ -48,6 +48,6 @@ def calculate_ssim(output_img, target_img):
     n = 0.0
     for im_idx in range(output_tf.shape[0]):
         ssim += metrics.structural_similarity(rgb2gray(cv2.cvtColor(target_tf[im_idx, ...],cv2.COLOR_BGR2RGB)),
-                                             rgb2gray(cv2.cvtColor(output_tf[im_idx, ...],cv2.COLOR_BGR2RGB)))
+                                             rgb2gray(cv2.cvtColor(output_tf[im_idx, ...],cv2.COLOR_BGR2RGB)), data_range=1.0)
         n += 1.0
     return ssim / n
